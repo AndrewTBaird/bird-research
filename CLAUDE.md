@@ -6,16 +6,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm install   # Install dependencies
-npm run dev   # Run development server (ts-node src/index.ts)
+npm run dev   # Run API server (port 3200)
 ```
 
-There is no build, lint, or test script configured.
+There is no build, lint, or test script configured yet.
+
+## Todo
+
+- [ ] Worker process (`src/worker.ts`) — polls LMDB queue, fetches Wikipedia, stores result in `bird:{name}`
+  - `npm run worker` script, `WORKER_CONCURRENCY` env var controls async concurrency
+  - Lease-based claiming: set `leaseExpiry` on job when claiming, so crashed workers can be reclaimed
+  - Retry with backoff on Wikipedia fetch failure; mark job `failed` after max retries
+- [ ] Lease reaper — background sweep (in worker) that requeues jobs with expired leases
+- [ ] Test suite — concurrent job claiming (no double-processing), lease expiry/reclaim, retry behavior
+- [ ] Observability — structured logging, `/health` endpoint, counters for queue depth / jobs processed / failures
+- [ ] README — how to run, how to run tests, what was built + what's next
 
 ## Architecture
 
 This is a minimal Express 5 backend with LMDB persistence.
 
-- **Entry point**: `src/index.ts` — starts an Express server on port 3200
+- **Entry point**: `src/index.ts` — Express server on port 3200, run via `tsx`
+- **Service layer**: `src/birdService.ts` — job creation and bird result lookup (called by routes)
+- **Data layer**: `src/db.ts` — LMDB instance, types (`Job`, `BirdResult`), key helpers (`jobKey`, `birdKey`)
+- **Wikipedia client**: `src/wikipedia.ts` — `fetchBirdSummary(name)`, throws `BirdNotFoundError` on missing page
 - **Database**: LMDB key-value store opened at `./data/` (gitignored). Initialized on first run.
 - **TypeScript**: Strict mode with `nodenext` module resolution and `exactOptionalPropertyTypes`
 
