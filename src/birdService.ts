@@ -2,6 +2,7 @@ import { getJob, createJobIfNotExists, getBirdResult, saveBirdResult, updateJobS
 import { type Job, type BirdResult } from './types.js';
 import { fetchBirdSummary, BirdNotFoundError } from './wikipedia.js';
 import { withRetry } from './retry.js';
+import { log } from './logger.js';
 
 export async function createBirdJob(name: string): Promise<Job> {
   const existing = getJob(name);
@@ -9,6 +10,7 @@ export async function createBirdJob(name: string): Promise<Job> {
 
   const job: Job = { name, status: 'queued', createdAt: new Date().toISOString() };
   await createJobIfNotExists(name, job);
+  log('job.created', { name });
 
   // Re-read in case a concurrent writer won the race
   return getJob(name) as Job;
@@ -17,7 +19,8 @@ export async function createBirdJob(name: string): Promise<Job> {
 export async function executeBirdJob(name: string): Promise<void> {
   await updateJobStatus(name, 'processing');
   await removeFromQueue(name);
-  
+  log('job.started', { name });
+
   try {
     const summary = await withRetry(
       () => fetchBirdSummary(name),
@@ -25,8 +28,10 @@ export async function executeBirdJob(name: string): Promise<void> {
     );
     await saveBirdResult(name, { name, summary });
     await updateJobStatus(name, 'done');
+    log('job.completed', { name });
   } catch (err) {
     await updateJobStatus(name, 'failed');
+    log('job.failed', { name, error: err instanceof Error ? err.message : String(err) });
     if (!(err instanceof BirdNotFoundError)) {
       throw err;
     }

@@ -1,5 +1,6 @@
 import express from 'express';
 import { createBirdJob, getBird } from './birdService.js';
+import { getQueue } from './db.js';
 
 const app = express();
 const port = 3200;
@@ -31,6 +32,10 @@ app.get('/bird', (req, res) => {
   }
 
   res.json(result);
+});
+
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok', queueDepth: getQueue().length, ts: new Date().toISOString() });
 });
 
 app.listen(port, () => {

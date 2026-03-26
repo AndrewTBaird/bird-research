@@ -13,10 +13,10 @@ export function getJob(name: string): Job | undefined {
 }
 
 export async function createJobIfNotExists(name: string, job: Job): Promise<void> {
-  await db.ifNoExists(jobKey(name), () => {
+  await db.transaction(() => {
+    if (db.get(jobKey(name)) !== undefined) return;
     db.put(jobKey(name), job);
-
-    const queue = getQueue() as string[];
+    const queue = db.get(QUEUE_KEY) as string[] | undefined ?? [];
     if (!queue.includes(name)) {
       db.put(QUEUE_KEY, [...queue, name]);
     }

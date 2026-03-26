@@ -22,7 +22,7 @@ npm run worker  # Run worker process (WORKER_CONCURRENCY=N to set concurrency)
 - [x] Test suite — db operations, job claiming, lock behavior, batch concurrency (21 tests)
 - [x] Retry with backoff on Wikipedia fetch failure; mark job `failed` after max retries (`src/retry.ts`, 3 attempts, exponential backoff, configurable via `RETRY_BASE_DELAY_MS`)
 - [x] Lease expiry — reaper runs every poll cycle, requeues jobs with expired locks (30s timeout, configurable via `LEASE_TIMEOUT_MS`)
-- [ ] Observability — structured logging, `/health` endpoint, counters for queue depth / jobs processed / failures
+- [x] Observability — structured JSON logging (`src/logger.ts`) on job.created/started/completed/failed/lease_expired; `/health` endpoint returns queue depth + timestamp
 - [ ] README — what was built + what's next
 
 ## Architecture
