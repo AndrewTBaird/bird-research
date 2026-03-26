@@ -5,6 +5,17 @@ npm install
 npm run dev && npm run worker
 ```
 
+# Database Schema
+
+All data is stored in LMDB as key-value pairs.
+
+| Key | Value | Description |
+|---|---|---|
+| `job:{name}` | `{ name, status, createdAt }` | Job record. Status: `queued`, `processing`, `done`, `failed` |
+| `bird:{name}` | `{ name, summary }` | Wikipedia summary, written by worker on completion |
+| `queue:pending` | `string[]` | Ordered list of bird names waiting to be processed |
+| `lock:{name}` | `number` (timestamp) | Held by a worker while processing. Prevents double-processing |
+
 # Unit Tests
 
 ```

@@ -1,5 +1,5 @@
 import express from 'express';
-import { createBirdJob, getBirdResult } from './birdService.js';
+import { createBirdJob, getBird } from './birdService.js';
 
 const app = express();
 const port = 3200;
@@ -24,7 +24,7 @@ app.get('/bird', (req, res) => {
     return;
   }
 
-  const result = getBirdResult(name);
+  const result = getBird(name);
   if (!result) {
     res.status(404).json({ error: 'No result found for this bird' });
     return;

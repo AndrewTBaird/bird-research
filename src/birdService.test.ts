@@ -1,22 +1,22 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { db, jobKey, queueKey } from './db.js';
+import { getJob, getQueue, clearAll } from './db.js';
 import { createBirdJob } from './birdService.js';
 
 beforeEach(async () => {
-  await db.clearAsync();
+  await clearAll();
 });
 
 describe('createBirdJob', () => {
   it('no jobs: queue is empty', () => {
-    expect(db.get(queueKey)).toBeUndefined();
+    expect(getQueue()).toEqual([]);
   });
 
   it('one job: job record exists with queued status and queue contains the name', async () => {
     const job = await createBirdJob('crow');
 
     expect(job).toEqual({ name: 'crow', status: 'queued', createdAt: expect.any(String) });
-    expect(db.get(jobKey('crow'))).toEqual(job);
-    expect(db.get(queueKey)).toEqual(['crow']);
+    expect(getJob('crow')).toEqual(job);
+    expect(getQueue()).toEqual(['crow']);
   });
 
   it('many jobs: queue preserves insertion order', async () => {
@@ -24,7 +24,7 @@ describe('createBirdJob', () => {
     await createBirdJob('pelican');
     await createBirdJob('eagle');
 
-    expect(db.get(queueKey)).toEqual(['crow', 'pelican', 'eagle']);
+    expect(getQueue()).toEqual(['crow', 'pelican', 'eagle']);
   });
 
   it('duplicate job: returns same record and queue contains name only once', async () => {
@@ -32,6 +32,6 @@ describe('createBirdJob', () => {
     const second = await createBirdJob('crow');
 
     expect(first).toEqual(second);
-    expect(db.get(queueKey)).toEqual(['crow']);
+    expect(getQueue()).toEqual(['crow']);
   });
 });

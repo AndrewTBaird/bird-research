@@ -1,33 +1,34 @@
-import { db, jobKey, birdKey, queueKey, type Job, type BirdResult } from './db.js';
+import { getJob, createJobIfNotExists, getBirdResult, saveBirdResult, updateJobStatus, removeFromQueue } from './db.js';
+import { type Job, type BirdResult } from './types.js';
+import { fetchBirdSummary, BirdNotFoundError } from './wikipedia.js';
 
 export async function createBirdJob(name: string): Promise<Job> {
-  let job = db.get(jobKey(name)) as Job | undefined;
-  if (job) return job;
+  const existing = getJob(name);
+  if (existing) return existing;
 
-  job = { name, status: 'queued', createdAt: new Date().toISOString() };
-  await db.ifNoExists(jobKey(name), () => {
-    db.put(jobKey(name), job);
-    addToQueue(name)
-  });
+  const job: Job = { name, status: 'queued', createdAt: new Date().toISOString() };
+  await createJobIfNotExists(name, job);
 
   // Re-read in case a concurrent writer won the race
-  return db.get(jobKey(name)) as Job;
+  return getJob(name) as Job;
 }
 
-export function getBirdResult(name: string): BirdResult | undefined {
-  return db.get(birdKey(name)) as BirdResult | undefined;
+export async function executeBirdJob(name: string): Promise<void> {
+  await updateJobStatus(name, 'processing');
+  await removeFromQueue(name);
+  
+  try {
+    const summary = await fetchBirdSummary(name);
+    await saveBirdResult(name, { name, summary });
+    await updateJobStatus(name, 'done');
+  } catch (err) {
+    await updateJobStatus(name, 'failed');
+    if (!(err instanceof BirdNotFoundError)) {
+      throw err;
+    }
+  }
 }
 
-function addToQueue(name: string) {
-  let workerQueue = db.get(queueKey)
-  if (!workerQueue) {
-    db.put(queueKey, [name])
-    return 
-  }
-
-  if (workerQueue.includes(name)) {
-    return
-  }
-  workerQueue.push(name)
-  db.put(queueKey, workerQueue)
+export function getBird(name: string): BirdResult | undefined {
+  return getBirdResult(name);
 }
