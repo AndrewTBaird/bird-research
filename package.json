@@ -2,7 +2,8 @@
   "name": "birds",
   "type": "module",
   "scripts": {
-    "dev": "tsx src/index.ts"
+    "dev": "tsx src/index.ts",
+    "worker": "tsx src/worker.ts"
   },
   "dependencies": {
     "express": "^5.2.1",

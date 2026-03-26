@@ -22,3 +22,6 @@ export function jobKey(name: string) {
 export function birdKey(name: string) {
   return `bird:${name}`;
 }
+
+export const queueKey = "queue:pending"
+
