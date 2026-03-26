@@ -47,8 +47,10 @@ export async function setQueue(queue: string[]): Promise<void> {
 }
 
 export async function removeFromQueue(name: string): Promise<void> {
-  const queue = getQueue().filter(n => n !== name);
-  await db.put(QUEUE_KEY, queue);
+  await db.transaction(() => {
+    const queue = db.get(QUEUE_KEY) as string[] | undefined ?? [];
+    db.put(QUEUE_KEY, queue.filter(n => n !== name));
+  });
 }
 
 export async function acquireLock(name: string): Promise<boolean> {

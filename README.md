@@ -67,14 +67,28 @@ curl -s -X POST http://localhost:3200/bird \
 
 ### Queue 30 jobs to observe concurrency
 
-In one terminal, start the worker with high concurrency:
+This requires 3 terminals. Start them in order so the health check is running before jobs are queued.
 
+**Terminal 1** — API server:
+```bash
+npm run dev
+```
+
+**Terminal 2** — Worker with high concurrency:
 ```bash
 WORKER_CONCURRENCY=10 npm run worker
 ```
 
-In another terminal, queue 30 birds at once:
+**Terminal 3** — Watch queue depth (start this before queuing jobs):
+```bash
+while true
+do curl -s http://localhost:3200/health
+echo
+sleep 1
+done
+```
 
+**Terminal 4** — Queue 30 birds:
 ```bash
 birds=(
   "crow" "pelican" "eagle" "hawk" "falcon" "owl" "heron" "crane"
@@ -91,17 +105,7 @@ done
 wait
 ```
 
-Watch the queue drain via the health endpoint:
-
-```bash
-while true
-do curl -s http://localhost:3200/health
-echo
-sleep 1
-done
-```
-
-Check a result once the worker has processed it:
+You should see queue depth spike in Terminal 3 then drain to 0 as the worker processes jobs. Check a result after:
 
 ```bash
 curl -s "http://localhost:3200/bird?name=eagle"
