@@ -66,6 +66,31 @@ export async function releaseLock(name: string): Promise<void> {
   await db.remove(lockKey(name));
 }
 
+export function getExpiredLocks(leaseTimeoutMs: number): string[] {
+  const now = Date.now();
+  const expired: string[] = [];
+  for (const { key, value } of db.getRange({ start: 'lock:', end: 'lock:~' })) {
+    if (now - (value as number) > leaseTimeoutMs) {
+      expired.push((key as string).slice('lock:'.length));
+    }
+  }
+  return expired;
+}
+
+export async function requeueJob(name: string): Promise<void> {
+  await db.transaction(() => {
+    db.remove(lockKey(name));
+    const job = db.get(jobKey(name)) as Job | undefined;
+    if (job) {
+      db.put(jobKey(name), { ...job, status: 'queued' });
+    }
+    const queue = db.get(QUEUE_KEY) as string[] | undefined ?? [];
+    if (!queue.includes(name)) {
+      db.put(QUEUE_KEY, [...queue, name]);
+    }
+  });
+}
+
 export async function clearAll(): Promise<void> {
   await db.clearAsync();
 }

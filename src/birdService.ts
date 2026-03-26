@@ -1,6 +1,7 @@
 import { getJob, createJobIfNotExists, getBirdResult, saveBirdResult, updateJobStatus, removeFromQueue } from './db.js';
 import { type Job, type BirdResult } from './types.js';
 import { fetchBirdSummary, BirdNotFoundError } from './wikipedia.js';
+import { withRetry } from './retry.js';
 
 export async function createBirdJob(name: string): Promise<Job> {
   const existing = getJob(name);
@@ -18,7 +19,10 @@ export async function executeBirdJob(name: string): Promise<void> {
   await removeFromQueue(name);
   
   try {
-    const summary = await fetchBirdSummary(name);
+    const summary = await withRetry(
+      () => fetchBirdSummary(name),
+      (err) => !(err instanceof BirdNotFoundError),
+    );
     await saveBirdResult(name, { name, summary });
     await updateJobStatus(name, 'done');
   } catch (err) {

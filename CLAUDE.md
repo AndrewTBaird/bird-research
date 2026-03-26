@@ -9,27 +9,32 @@ npm install   # Install dependencies
 npm run dev   # Run API server (port 3200)
 ```
 
-There is no build, lint, or test script configured yet.
+```bash
+npm test        # Run test suite
+npm run worker  # Run worker process (WORKER_CONCURRENCY=N to set concurrency)
+```
 
 ## Todo
 
-- [ ] Worker process (`src/worker.ts`) — polls LMDB queue, fetches Wikipedia, stores result in `bird:{name}`
+- [x] Worker process (`src/worker.ts` + `src/workerUtils.ts`) — polls LMDB queue, processes jobs
   - `npm run worker` script, `WORKER_CONCURRENCY` env var controls async concurrency
-  - Lease-based claiming: set `leaseExpiry` on job when claiming, so crashed workers can be reclaimed
-  - Retry with backoff on Wikipedia fetch failure; mark job `failed` after max retries
-- [ ] Lease reaper — background sweep (in worker) that requeues jobs with expired leases
-- [ ] Test suite — concurrent job claiming (no double-processing), lease expiry/reclaim, retry behavior
+  - Lock-based claiming via `acquireLock` / `releaseLock` prevents double-processing
+- [x] Test suite — db operations, job claiming, lock behavior, batch concurrency (21 tests)
+- [x] Retry with backoff on Wikipedia fetch failure; mark job `failed` after max retries (`src/retry.ts`, 3 attempts, exponential backoff, configurable via `RETRY_BASE_DELAY_MS`)
+- [x] Lease expiry — reaper runs every poll cycle, requeues jobs with expired locks (30s timeout, configurable via `LEASE_TIMEOUT_MS`)
 - [ ] Observability — structured logging, `/health` endpoint, counters for queue depth / jobs processed / failures
-- [ ] README — how to run, how to run tests, what was built + what's next
+- [ ] README — what was built + what's next
 
 ## Architecture
 
 This is a minimal Express 5 backend with LMDB persistence.
 
-- **Entry point**: `src/index.ts` — Express server on port 3200, run via `tsx`
-- **Service layer**: `src/birdService.ts` — job creation and bird result lookup (called by routes)
-- **Data layer**: `src/db.ts` — LMDB instance, types (`Job`, `BirdResult`), key helpers (`jobKey`, `birdKey`)
-- **Wikipedia client**: `src/wikipedia.ts` — `fetchBirdSummary(name)`, throws `BirdNotFoundError` on missing page
+- **`src/index.ts`** — Express server on port 3200, routing only
+- **`src/birdService.ts`** — business logic: `createBirdJob`, `executeBirdJob`, `getBird`
+- **`src/db.ts`** — all LMDB operations; types live in `src/types.ts`
+- **`src/worker.ts`** — entry point for worker process, polling loop only
+- **`src/workerUtils.ts`** — `processJob` (lock → execute → release), `processBatch` (concurrency-aware)
+- **`src/wikipedia.ts`** — `fetchBirdSummary(name)`, throws `BirdNotFoundError` on missing page
 - **Database**: LMDB key-value store opened at `./data/` (gitignored). Initialized on first run.
 - **TypeScript**: Strict mode with `nodenext` module resolution and `exactOptionalPropertyTypes`
 
