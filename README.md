@@ -110,3 +110,15 @@ You should see queue depth spike in Terminal 3 then drain to 0 as the worker pro
 ```bash
 curl -s "http://localhost:3200/bird?name=eagle"
 ```
+
+# What's Next
+
+**Replace LMDB with a real queue broker.** LMDB works well for a single machine, but the queue implementation (a list in a KV store, polling, manual locking) is reinventing what Redis Streams, SQS, or RabbitMQ give you out of the box. Moving to a proper broker would also decouple workers from the API server's host, enable horizontal scaling across machines, and remove the lock/lease plumbing entirely.
+
+**Dead-letter queue.** Right now jobs that exhaust retries are marked `failed` and left in place. A DLQ would give ops a place to inspect them, replay selectively, and alert on failure rate without scanning all job records.
+
+**Webhook / SSE notification.** Clients currently have to poll `GET /bird` until the job completes. A webhook callback URL on `POST /bird`, or a server-sent events stream, would eliminate polling and make the API composable with downstream automation.
+
+**Graceful shutdown.** Workers don't currently handle `SIGTERM`. A worker killed mid-job will hold its lock until the lease expires (up to 30s). Proper shutdown would finish in-flight work, skip claiming new jobs, and exit cleanly — important for rolling deploys.
+
+**Metrics endpoint.** `/health` returns queue depth, but a Prometheus-compatible `/metrics` endpoint (jobs processed, failure rate, processing latency p50/p95, lease expirations) would make the system observable without log scraping.
