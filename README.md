@@ -67,7 +67,7 @@ curl -s -X POST http://localhost:3200/bird \
 
 ### Queue 30 jobs to observe concurrency
 
-This requires 3 terminals. Start them in order so the health check is running before jobs are queued.
+This requires 4 terminals. Start them in order so the health check is running before jobs are queued.
 
 **Terminal 1** — API server:
 ```bash
