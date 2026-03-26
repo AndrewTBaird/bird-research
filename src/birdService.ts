@@ -21,14 +21,13 @@ export function getBirdResult(name: string): BirdResult | undefined {
 function addToQueue(name: string) {
   let workerQueue = db.get(queueKey)
   if (!workerQueue) {
-    workerQueue = [name]
+    db.put(queueKey, [name])
     return 
   }
 
   if (workerQueue.includes(name)) {
     return
   }
-
   workerQueue.push(name)
-  console.log(db.get(queueKey))
+  db.put(queueKey, workerQueue)
 }

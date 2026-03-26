@@ -1,6 +1,6 @@
 import { open } from 'lmdb';
 
-export const db = open({ path: './data' });
+export const db = open({ path: process.env['DB_PATH'] ?? './data' });
 
 export type JobStatus = 'queued' | 'processing' | 'done' | 'failed';
 
